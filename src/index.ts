@@ -15,7 +15,6 @@ import { InfoSchema, SearchAutocompleteSchema } from "./schema/r34";
 import { HentaiInfoSchema, HentaiSearchResultSchema, HentaiSourceSchema } from "./schema/hentai-haven";
 
 const missingEnvVars = [];
-if(!process.env.MONGODB_URL) missingEnvVars.push("MONGODB_URL");
 if(!process.env.REDIS_HOST) missingEnvVars.push("REDIS_HOST");
 if(!process.env.REDIS_PASSWORD) missingEnvVars.push("REDIS_PASSWORD");
 
@@ -28,14 +27,16 @@ const redis = new Redis({
     host: process.env.REDIS_HOST,
     password: process.env.REDIS_PASSWORD
 });
-const mongoClient = new MongoClient(process.env.MONGODB_URL!);
-let db: Db;
-let apiKeyCollection: Collection;
+const mongoClient = process.env.MONGODB_URL ? new MongoClient(process.env.MONGODB_URL) : undefined;
+let db: Db | undefined;
+let apiKeyCollection: Collection | undefined;
 
 const connectToDb = async () => {
-  await mongoClient.connect();
-  db = mongoClient.db();
-  apiKeyCollection = db.collection("apiKeys");
+  if(mongoClient) {
+    await mongoClient.connect();
+    db = mongoClient.db();
+    apiKeyCollection = db.collection("apiKeys");
+  }
 };
 
 const app = new Hono();
@@ -88,7 +89,7 @@ const apiKeyAuth = async (c: Context): Promise<Response | void> => {
   if (!apiKey) {
     return undefined;
   }
-  const key = await apiKeyCollection.findOne({ key: apiKey });
+  const key = await apiKeyCollection?.findOne({ key: apiKey });
   if (!key) {
     return c.json({ error: "Invalid API key" }, 401);
   }
