@@ -176,3 +176,5 @@ export default {
   fetch: app.fetch,
   port: port,
 };
+
+connectToDb();
